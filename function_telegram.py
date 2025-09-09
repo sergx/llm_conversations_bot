@@ -1,0 +1,19 @@
+
+from telegram.ext import ContextTypes
+from telegram.constants import MessageLimit
+
+async def safe_send_message(context: ContextTypes.DEFAULT_TYPE, chat_id, text, **kwargs):
+    chunks = [text[i:i + MessageLimit.MAX_TEXT_LENGTH] 
+              for i in range(0, len(text), MessageLimit.MAX_TEXT_LENGTH)]
+    for chunk in chunks:
+        await context.bot.send_message(chat_id=chat_id, text=chunk, **kwargs)
+    # results = []
+    # for chunk in chunks:
+    #     if args:
+    #         new_args = (chat_id, chunk, *args[1:])
+    #     else:
+    #         new_args = (chat_id,)
+    #     new_kwargs = {**kwargs, "text": chunk}
+    #     msg = await context.bot.send_message(*new_args, **new_kwargs)
+    #     results.append(msg)
+    # return results
