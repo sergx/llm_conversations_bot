@@ -2,15 +2,16 @@ name: LLM Conversation Bot
 
 on: [push]
 
-env:
-  SUCCESS_FILE: /home/sergx/tmp/git-pull-success__llm_conv_bot.txt
-  ERROR_FILE: /home/sergx/tmp/git-pull-error__llm_conv_bot.txt
 
 jobs:
   run_ssh_command:
     runs-on: ubuntu-latest
+    env:
+      SUCCESS_FILE: /home/sergx/tmp/git-pull-success__llm_conv_bot.txt
+      ERROR_FILE: /home/sergx/tmp/git-pull-error__llm_conv_bot.txt
+      TEST_ENV: 'qweqweqwe'
     steps:
-      - run: echo "🎉 The job was automatically triggered."
+      - run: echo "🎉 The job was automatically triggered. $TEST_ENV"
 
       - name: Run scripts
         uses: appleboy/ssh-action@v1.0.3
@@ -19,6 +20,7 @@ jobs:
           username: ${{ secrets.PRODUCTION_USERNAME }}
           password: ${{ secrets.PRODUCTION_PASSWORD }}
           port: ${{ secrets.PRODUCTION_PORT }}
+          envs: SUCCESS_FILE,ERROR_FILE
           script: |
             mkdir -p /home/sergx/tmp
 
@@ -42,9 +44,11 @@ jobs:
             }
 
             if [ -s "$ERROR_FILE" ]; then
-              send_telegram "❌ Deployment failed\n$(cat "$ERROR_FILE")"
+              send_telegram "❌ $TEST_ENV Deployment failed\n$(cat "$ERROR_FILE")"
             fi
 
             if [ -s "$SUCCESS_FILE" ]; then
-              send_telegram "✅ Deployment success\n$(cat "$SUCCESS_FILE")"
+              send_telegram "✅ $TEST_ENV Deployment success\n$(cat "$SUCCESS_FILE")"
             fi
+
+            rm -f "$SUCCESS_FILE" "$ERROR_FILE"
