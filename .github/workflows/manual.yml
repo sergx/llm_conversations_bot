@@ -32,14 +32,19 @@ jobs:
 
             send_telegram () {
               local message="$1"
-              local max_length=4096
+              local max_length=4000   # slightly under 4096 to be safe
+              local chunk=""
+
               while [ -n "$message" ]; do
-                chunk="${message:0:max_length}"
+                # take first $max_length characters safely (UTF-8 aware)
+                chunk=$(echo "$message" | head -c "$max_length")
+                # send chunk
                 curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
                   -d chat_id=${{ vars.TELEGRAM_CHAT_ID }} \
                   --data-urlencode text="$chunk" \
                   -d parse_mode=HTML
-                message="${message:max_length}"
+                # remove sent part from message
+                message="${message:${#chunk}}"
               done
             }
 
