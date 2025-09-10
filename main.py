@@ -274,9 +274,9 @@ async def convs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             postfix = " force_text"
             
         if is_active:
-            lines.append(f"<i>{prefix} {model_name} — {dialogues_count} — <b>«{conv_name or '(no name)'}»</b>{postfix}</i>")
+            lines.append(f"<i>{prefix} {model_name} — {dialogues_count}\n<b>«{conv_name or '(no name)'}»</b>{postfix}</i>")
         else:
-            lines.append(f"{prefix} {model_name} — {dialogues_count} — <b>«{conv_name or '(no name)'}»</b>{postfix}")
+            lines.append(f"{prefix} {model_name} — {dialogues_count}\n<b>«{conv_name or '(no name)'}»</b>{postfix}")
             
     await safe_send_message(context, chat_id, "\n\n".join(lines), parse_mode="HTML")
 
