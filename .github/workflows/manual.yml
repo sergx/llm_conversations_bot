@@ -40,16 +40,16 @@ jobs:
                   --data-urlencode text="$chunk" \
                   -d parse_mode=HTML
                 message="${message:max_length}"
+                message="${message:max_length}"
               done
             }
 
             if [ -s "$ERROR_FILE" ]; then
-              # Use $'...' to interpret \n as a real newline
-              send_telegram $'❌ '"Deployment failed\n"$(cat "$ERROR_FILE")
+              send_telegram $'❌ Deployment failed\n'$(cat "$ERROR_FILE")
             fi
 
             if [ -s "$SUCCESS_FILE" ]; then
-              send_telegram $'✅ '"Deployment success\n"$(cat "$SUCCESS_FILE")
+              send_telegram $'✅ Deployment success\n'$(cat "$SUCCESS_FILE")
             fi
 
             rm -f "$SUCCESS_FILE" "$ERROR_FILE"
