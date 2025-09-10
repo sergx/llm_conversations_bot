@@ -179,22 +179,22 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = get_or_create_user(user)
     chat_id = user.id
-    # if chat_id not in ALLOWED_CHAT_IDS:
-    #     await update.message.reply_text(
-    #         text = (
-    #             f"Ваш chat_id - <pre>{chat_id}</pre>\n"
-    #             f"Сообщите об этом кому надо."
-    #         ),
-    #         parse_mode='HTML'
-    #     )
-    #     return ConversationHandler.END
-    await update.message.reply_text(
-        text = (
-            f"Ваш chat_id - <pre>{chat_id}</pre>\n"
-            f"Сообщите об этом кому надо."
-        ),
-        parse_mode='HTML'
-    )
+    if chat_id not in ALLOWED_CHAT_IDS:
+        await update.message.reply_text(
+            text = (
+                f"Ваш chat_id - <pre>{chat_id}</pre>\n"
+                f"Сообщите об этом кому надо."
+            ),
+            parse_mode='HTML'
+        )
+        return ConversationHandler.END
+    # await update.message.reply_text(
+    #     text = (
+    #         f"Ваш chat_id - <pre>{chat_id}</pre>\n"
+    #         f"Сообщите об этом кому надо."
+    #     ),
+    #     parse_mode='HTML'
+    # )
     active = get_active_conversation(user_id)
     if not active:
         # create_conversation(user_id, conversation_name="Noname", model_name=DEFAULT_MODEL, set_active=True)
@@ -564,17 +564,17 @@ def main():
 
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(conversations["renameconv"])
-    app.add_handler(CommandHandler("start", start_command, filters=allowed_chats))
-    app.add_handler(CommandHandler("newconv", newconv_command, filters=allowed_chats))
-    app.add_handler(CommandHandler("newconv_audio", newconv_audio_command, filters=allowed_chats))
-    app.add_handler(CommandHandler("newconv_text", newconv_text_command, filters=allowed_chats))
-    app.add_handler(CommandHandler("convs", convs_command, filters=allowed_chats))
-    app.add_handler(MessageHandler(filters.Regex(r"^/switch_\d+$"), switch_command))
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("newconv", newconv_command, filters=filters.User(ALLOWED_CHAT_IDS)))
+    app.add_handler(CommandHandler("newconv_audio", newconv_audio_command, filters=filters.User(ALLOWED_CHAT_IDS)))
+    app.add_handler(CommandHandler("newconv_text", newconv_text_command, filters=filters.User(ALLOWED_CHAT_IDS)))
+    app.add_handler(CommandHandler("convs", convs_command, filters=filters.User(ALLOWED_CHAT_IDS)))
+    app.add_handler(MessageHandler(filters.Regex(r"^/switch_\d+$") & filters.User(ALLOWED_CHAT_IDS), switch_command))
 
     # text messages
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & allowed_chats, handle_text))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.User(ALLOWED_CHAT_IDS), handle_text))
     # voice or audio
-    app.add_handler(MessageHandler((filters.VOICE | filters.AUDIO) & allowed_chats, handle_voice))
+    app.add_handler(MessageHandler((filters.VOICE | filters.AUDIO) & filters.User(ALLOWED_CHAT_IDS), handle_voice))
 
     logger.info("Starting bot...")
     app.add_error_handler(bot_error_handler)
