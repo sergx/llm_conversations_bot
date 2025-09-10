@@ -1,4 +1,4 @@
-
+from telegram import Update
 from telegram.ext import ContextTypes, filters
 from telegram.constants import MessageLimit
 
@@ -23,11 +23,8 @@ async def safe_send_message(context: ContextTypes.DEFAULT_TYPE, chat_id, text, *
 def allowed_users_filter(update):
     return update.effective_chat and update.effective_chat.id in ALLOWED_CHAT_IDS
 
-class AllowedChatsFilter(filters.BaseFilter):
-    def __init__(self, allowed_ids):
-        self.allowed_ids = allowed_ids
+class AllowedChats:
+    def __call__(self, update: Update) -> bool:
+        return update.effective_chat and update.effective_chat.id in ALLOWED_CHAT_IDS
 
-    def filter(self, message):
-        return message.chat_id in self.allowed_ids
-
-allowed_chats = AllowedChatsFilter(ALLOWED_CHAT_IDS)
+allowed_chats = AllowedChats()
