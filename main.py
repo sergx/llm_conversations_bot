@@ -1,3 +1,4 @@
+# sudo systemctl restart llm_conversations_bot.service
 # sudo systemctl start llm_conversations_bot.service
 # sudo systemctl status llm_conversations_bot.service
 
@@ -30,7 +31,7 @@ load_dotenv()
 from functions_logging import setup_logger
 logger = setup_logger(__name__)
 
-from function_telegram import safe_send_message
+from function_telegram import *
 
 from openai_proxy_client import openai_client
 client = openai_client()
@@ -177,7 +178,16 @@ def tts_generate(text, out_mp3, model_name="gpt-4o-mini-tts", context=None, chat
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = get_or_create_user(user)
-    # create default conversation if none
+    chat_id = user.id
+    if chat_id not in ALLOWED_CHAT_IDS:
+        await update.message.reply_text(
+            text = (
+                f"Ваш chat_id - <pre>{chat_id}</pre>\n"
+                f"Сообщите об этом кому надо."
+            ),
+            parse_mode='HTML'
+        )
+        return ConversationHandler.END
     
     active = get_active_conversation(user_id)
     if not active:
@@ -539,24 +549,25 @@ conversations = {
     ),
 }
 
+
+
 def main():
     
     os.makedirs(f"voices", exist_ok=True)
     init_db()
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-
     app.add_handler(conversations["renameconv"])
     app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("newconv", newconv_command))
-    app.add_handler(CommandHandler("newconv_audio", newconv_audio_command))
-    app.add_handler(CommandHandler("newconv_text", newconv_text_command))
-    app.add_handler(CommandHandler("convs", convs_command))
-    app.add_handler(MessageHandler(filters.Regex(r"^/switch_\d+$"), switch_command))
+    app.add_handler(CommandHandler("newconv", newconv_command, filters=allowed_users_filter))
+    app.add_handler(CommandHandler("newconv_audio", newconv_audio_command, filters=allowed_users_filter))
+    app.add_handler(CommandHandler("newconv_text", newconv_text_command, filters=allowed_users_filter))
+    app.add_handler(CommandHandler("convs", convs_command, filters=allowed_users_filter))
+    app.add_handler(MessageHandler(filters.Regex(r"^/switch_\d+$") & allowed_users_filter, switch_command, filters=allowed_users_filter))
 
     # text messages
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & allowed_users_filter, handle_text))
     # voice or audio
-    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
+    app.add_handler(MessageHandler((filters.VOICE | filters.AUDIO) & allowed_users_filter, handle_voice))
 
     logger.info("Starting bot...")
     app.add_error_handler(bot_error_handler)
@@ -571,70 +582,3 @@ if __name__ == "__main__":
     
     #get_model_costs()
     main()
-
-
-# def generate_image(prompt, out_path):
-#     logger.info("generate_image...")
-#     resp = client.images.generate(model="gpt-image-1", prompt=prompt, size="512x512")
-#     url = resp.data[0].url
-#     img = requests.get(url)
-#     with open(out_path, "wb") as f:
-#         f.write(img.content)
-#     return out_path
-
-
-# async def handle_image_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     await update.message.reply_text("Нет картинок для РФ...")
-#     return
-#     user = update.effective_user
-#     user_id = get_or_create_user(user)
-#     active = get_active_conversation(user_id)
-#     logger.info(active)
-#     if not active:
-#         conv_id = create_conversation(user_id, conversation_name="GPT image", model_name="gpt-image-1", set_active=True)
-#     else:
-#         conv_id, model_name, _ = active
-
-#     prompt = " ".join(context.args) if context.args else ""
-#     if not prompt:
-#         await update.message.reply_text("Usage: /image <prompt>")
-#         return
-
-    
-#     # Save request
-#     # save_dialogue(conv_id, "image_request", user_text=prompt)
-
-#     # Call OpenAI images API (example)
-#     try:
-#         # Using OpenAI images endpoint via HTTP (most stable)
-#         url = "https://api.openai.com/v1/images/generations"
-#         headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
-#         payload = {"model": "gpt-image-1", "prompt": prompt, "size": "1024x1024", "n": 1}
-#         r = requests.post(url, headers=headers, json=payload)
-#         r.raise_for_status()
-#         j = r.json()
-#         # the returned result may contain base64 or url; handle url case
-#         image_url = j["data"][0].get("url")
-#         if image_url:
-#             # download image
-#             img_resp = requests.get(image_url)
-#             img_resp.raise_for_status()
-#             image_dir = os.path.join("images", str(user_id), str(conv_id))
-#             os.makedirs(image_dir, exist_ok=True)
-#             filename = f"{uuid.uuid4().hex}.png"
-#             fullpath = os.path.join(image_dir, filename)
-#             with open(fullpath, "wb") as f:
-#                 f.write(img_resp.content)
-#             # save_dialogue(conv_id, "image_response", llm_image_filepath=fullpath)
-#             await update.message.reply_photo(photo=InputFile(fullpath))
-#         else:
-#             await update.message.reply_text("Image generation succeeded but no URL returned.")
-#     except requests.exceptions.RequestException as e:
-#         logger.exception("RequestException during image generation: %s", e)
-#         if hasattr(e, 'response') and e.response is not None:
-#             await update.message.reply_text(f"Request failed: {e.response.status_code}\n{e.response.text}")
-#         else:
-#             await update.message.reply_text(f"Request failed: {e}")
-#     except Exception as e:
-#         logger.exception("Unexpected error: %s", e)
-#         await update.message.reply_text(f"Unexpected error: {e}")
