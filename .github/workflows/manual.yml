@@ -52,4 +52,4 @@ jobs:
               send_telegram $'✅ Deployment success\n'$(cat "$SUCCESS_FILE")
             fi
 
-            rm -f "$SUCCESS_FILE" "$ERROR_FILE"
+            # rm -f "$SUCCESS_FILE" "$ERROR_FILE"
