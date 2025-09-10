@@ -3,8 +3,6 @@
 # sudo systemctl stop llm_conversations_bot.service
 # sudo systemctl status llm_conversations_bot.service
 
-import traceback
-from pprint import pformat
 import os
 import uuid
 import logging
@@ -91,7 +89,7 @@ def log_api_cost(model_name, tokens_or_seconds, action=""):
 async def chat_completion_get_reply(system_prompt, messages, model_name, context=None, chat_id=None):
     logger.info("chat_completion_get_reply...")
     
-    safe_send_message(context, chat_id, f"Запрос обрабатывается [chat_completion]")
+    await safe_send_message(context, chat_id, f"Запрос обрабатывается [chat_completion]")
         
     if system_prompt:
         messages = [{"role": "system", "content": system_prompt}] + messages
@@ -124,11 +122,11 @@ async def chat_completion_get_reply(system_prompt, messages, model_name, context
         if name == model_name:
             return resp.choices[0].message.content
 
-def transcribe_audio(file_path, context=None, chat_id=None):
+async def transcribe_audio(file_path, context=None, chat_id=None):
     logger.info("transcribe_audio...")
     
     if context is not None and chat_id is not None:
-        safe_send_message(context, chat_id, f"Запрос обрабатывается [transcribe_audio]")
+        await safe_send_message(context, chat_id, f"Запрос обрабатывается [transcribe_audio]")
         
     model_name = "gpt-4o-mini-transcribe"
     with open(file_path, "rb") as f:
@@ -139,11 +137,11 @@ def transcribe_audio(file_path, context=None, chat_id=None):
         # log_api_cost("gpt-4o-mini-transcribe", seconds, "transcribe_audio")
     return resp.text
 
-def tts_generate(text, out_mp3, model_name="gpt-4o-mini-tts", context=None, chat_id=None):
+async def tts_generate(text, out_mp3, model_name="gpt-4o-mini-tts", context=None, chat_id=None):
     logger.info("tts_generate...")
 
     if context is not None and chat_id is not None:
-        safe_send_message(context, chat_id, f"Запрос обрабатывается [tts_generate]")
+        await safe_send_message(context, chat_id, f"Запрос обрабатывается [tts_generate]")
     # tts_voices = [
     #     "alloy",
     #     "ash",
@@ -356,8 +354,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     messages = build_message_history(conv_id)
     messages.append({"role": "user", "content": user_text})
-       
-    reply_text = await chat_completion_get_reply("You are a wise and highly experienced expert. Your answers should reflect deep knowledge, thoughtful reasoning, and practical wisdom. Communicate clearly, with authority, and in a way that inspires trust. Provide concise, professional, and insightful explanations, avoiding unnecessary simplifications.", messages, model_name=model_name, chat_id=chat_id, context=context)
+    system_promt = "You are a wise and highly experienced expert. Your answers should reflect deep knowledge, thoughtful reasoning, and practical wisdom. Communicate clearly, with authority, and in a way that inspires trust. Provide concise, professional, and insightful explanations, avoiding unnecessary simplifications."
+    reply_text = await chat_completion_get_reply(system_promt, messages, model_name=model_name, chat_id=chat_id, context=context)
 
     if dialogues_count == 0:
         conv_name = f"{user_text[0:42]}.."
@@ -374,7 +372,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.makedirs(llm_voice_dir, exist_ok=True)
         llm_filename = f"{uuid.uuid4().hex}_llm.mp3"
         llm_path = os.path.join(llm_voice_dir, llm_filename)
-        tts_generate(reply_text, llm_path, chat_id=chat_id, context=context)
+        await tts_generate(reply_text, llm_path, chat_id=chat_id, context=context)
         
         # send result: text + audio
         await safe_send_message(context, chat_id, f"{model_name}:\n{reply_text}\n\n{'\n'.join(actions)}")
@@ -430,7 +428,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Transcribe
     try:
         await update.message.reply_text("Transcribing your voice...")
-        transcript = transcribe_audio(local_path, chat_id=chat_id, context=context)
+        transcript = await transcribe_audio(local_path, chat_id=chat_id, context=context)
         await safe_send_message(context, chat_id, f"User transcript:\n\n{transcript}")
     except Exception as e:
         logger.exception("Transcription failed: %s", e)
@@ -444,7 +442,8 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text("Ожидание текстового ответа от LLM...")
     try:
-        reply_text = await chat_completion_get_reply("You are a wise and highly experienced expert. Your answers should reflect deep knowledge, thoughtful reasoning, and practical wisdom. Communicate clearly, with authority, and in a way that inspires trust. Provide concise, professional, and insightful explanations, avoiding unnecessary simplifications. Your output will be processed by text-to-speech, so avoid using emojis, code blocks, formulas, or any elements that may not be suitable for speech synthesis. Always respond in plain, natural language.", messages, model_name=model_name, chat_id=chat_id, context=context)
+        system_promt = "You are a wise and highly experienced expert. Your answers should reflect deep knowledge, thoughtful reasoning, and practical wisdom. Communicate clearly, with authority, and in a way that inspires trust. Provide concise, professional, and insightful explanations, avoiding unnecessary simplifications. Your output will be processed by text-to-speech, so avoid using emojis, code blocks, formulas, or any elements that may not be suitable for speech synthesis. Always respond in plain, natural language."
+        reply_text = await chat_completion_get_reply(system_promt, messages, model_name=model_name, chat_id=chat_id, context=context)
     except Exception as e:
         logger.exception("LLM failed: %s", e)
         await update.message.reply_text("Failed to get LLM response.")
@@ -487,47 +486,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("TTS generation or send failed: %s", e)
         await update.message.reply_text(reply_text)
 
-
-
-
-async def bot_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    """Log the error and send a telegram message if possible."""
-    # Log the error before we do anything else
-    logger.error(msg="Exception while handling an update:", exc_info=context.error)
-
-    # Get the full traceback
-    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
-    tb_string = ''.join(tb_list)
-    
-    # Pretty-format the update and context data
-    update_str = pformat(update.to_dict(), indent=1, width=80, compact=False) if isinstance(update, Update) else pformat(str(update))
-    chat_data_str = pformat(context.chat_data, indent=1, width=80, compact=False)
-    user_data_str = pformat(context.user_data, indent=1, width=80, compact=False)
-    
-    # Log detailed error information with pretty-printed data
-    error_message = (
-        f"⚠️ Exception while handling update:\n"
-        f"Update:\n{update_str}\n\n"
-        f"Chat Data:\n{chat_data_str}\n\n"
-        f"User Data:\n{user_data_str}\n\n"
-        f"{tb_string}"
-    )
-    
-    logger.error(error_message)
-    
-    # Optional: Send full error to admin
-    for dev_chat_id in DEVELOPER_CHAT_IDS:
-        if len(error_message) > 4096:  # Telegram message length limit
-            for x in range(0, len(error_message), 4096):
-                await context.bot.send_message(
-                    chat_id=dev_chat_id,
-                    text=error_message[x:x+4096]
-                )
-        else:
-            await context.bot.send_message(
-                chat_id=dev_chat_id,
-                text=error_message
-            )
 # --- main ---
 
 conversations = {
