@@ -26,7 +26,7 @@ jobs:
             cd llm_conversations_bot || { echo "❌ Folder not found"; exit 1; }
 
             # Run git pull and capture stdout/stderr separately
-            git pull >"$SUCCESS_FILE" 2>"$ERROR_FILE"
+            { git pull 2>&1 > "$SUCCESS_FILE" || echo "Git pull failed" > "$ERROR_FILE";} 
 
             sudo systemctl restart llm_conversations_bot.service
 
@@ -52,4 +52,3 @@ jobs:
               send_telegram $'✅ Deployment success\n'$(cat "$SUCCESS_FILE")
             fi
 
-            # rm -f "$SUCCESS_FILE" "$ERROR_FILE"
