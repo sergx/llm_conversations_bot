@@ -91,8 +91,7 @@ def log_api_cost(model_name, tokens_or_seconds, action=""):
 async def chat_completion_get_reply(system_prompt, messages, model_name, context=None, chat_id=None):
     logger.info("chat_completion_get_reply...")
     
-    if context is not None and chat_id is not None:
-        safe_send_message(context, chat_id, f"Запрос обрабатывается [chat_completion]")
+    safe_send_message(context, chat_id, f"Запрос обрабатывается [chat_completion]")
         
     if system_prompt:
         messages = [{"role": "system", "content": system_prompt}] + messages
