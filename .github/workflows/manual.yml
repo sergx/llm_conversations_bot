@@ -47,10 +47,10 @@ jobs:
             }
 
             if [ -s "$ERROR_FILE" ]; then
-              send_telegram "$(cat "$ERROR_FILE")"
+              send_telegram $'❌ Deployment failed\n'"$(cat "$ERROR_FILE")"
             fi
 
             if [ -s "$SUCCESS_FILE" ]; then
-              send_telegram "$(cat "$SUCCESS_FILE")"
+              send_telegram $'✅ Deployment success\n'"$(cat "$SUCCESS_FILE")"
             fi
 
