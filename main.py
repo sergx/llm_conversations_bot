@@ -568,7 +568,7 @@ def main():
     app.add_handler(CommandHandler("newconv_audio", newconv_audio_command, filters=allowed_users_filter))
     app.add_handler(CommandHandler("newconv_text", newconv_text_command, filters=allowed_users_filter))
     app.add_handler(CommandHandler("convs", convs_command, filters=allowed_users_filter))
-    app.add_handler(MessageHandler(filters.Regex(r"^/switch_\d+$") & allowed_users_filter, switch_command, filters=allowed_users_filter))
+    app.add_handler(MessageHandler(filters.Regex(r"^/switch_\d+$") & allowed_users_filter, switch_command))
 
     # text messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & allowed_users_filter, handle_text))
