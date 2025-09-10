@@ -40,7 +40,6 @@ jobs:
                   --data-urlencode text="$chunk" \
                   -d parse_mode=HTML
                 message="${message:max_length}"
-                message="${message:max_length}"
               done
             }
 
