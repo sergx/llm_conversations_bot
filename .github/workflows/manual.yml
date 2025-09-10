@@ -35,7 +35,7 @@ jobs:
               # Send initial message
               curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
                 -d chat_id=${{ vars.TELEGRAM_CHAT_ID }} \
-                -d text="Deployment failed with the following error"
+                -d text="Deployment failed with the following error $ERROR_FILE"
 
               # Send error message in chunks
               while [ -n "$error_message" ]; do
