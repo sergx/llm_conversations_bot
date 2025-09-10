@@ -26,9 +26,9 @@ jobs:
             echo "SUCCESS_FILE path: $SUCCESS_FILE"
             echo "ERROR_FILE path: $ERROR_FILE"
             cd llm_conversations_bot
-            { git pull 2>&1 > $SUCCESS_FILE || echo "Git pull failed" > $ERROR_FILE;} 
+            { git pull 2>&1 > "$SUCCESS_FILE" || echo "Git pull failed" > "$ERROR_FILE";} 
             sudo systemctl restart llm_conversations_bot.service
-            if [ -s $ERROR_FILE ]; then
+            if [ -s "$ERROR_FILE" ]; then
               error_message=$(cat $ERROR_FILE)
               max_length=4096
 
@@ -46,8 +46,8 @@ jobs:
                 error_message="${error_message:max_length}"
               done
             fi
-            if [ -s $SUCCESS_FILE ]; then
-              success_message=$(cat $SUCCESS_FILE)
+            if [ -s "$SUCCESS_FILE" ]; then
+              success_message=$(cat "$SUCCESS_FILE")
               max_length=4096
               while [ -n "$success_message" ]; do
                 chunk="${success_message:0:max_length}"
@@ -57,5 +57,5 @@ jobs:
                 success_message="${success_message:max_length}"
               done
             fi
-            rm -f $SUCCESS_FILE $ERROR_FILE
+            rm -f "$SUCCESS_FILE" "$ERROR_FILE"
 
