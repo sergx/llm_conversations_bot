@@ -580,6 +580,24 @@ def main():
     app.run_polling(timeout=300)
 
 
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(conversations["renameconv"])
+    app.add_handler(CommandHandler("start", start_command, filters=allowed_chats))
+    app.add_handler(CommandHandler("newconv", newconv_command, filters=allowed_chats))
+    app.add_handler(CommandHandler("newconv_audio", newconv_audio_command, filters=allowed_chats))
+    app.add_handler(CommandHandler("newconv_text", newconv_text_command, filters=allowed_chats))
+    app.add_handler(CommandHandler("convs", convs_command, filters=allowed_chats))
+    app.add_handler(MessageHandler(filters.Regex(r"^/switch_\d+$"), switch_command))
+
+    # text messages
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & allowed_chats, handle_text))
+    # voice or audio
+    app.add_handler(MessageHandler((filters.VOICE | filters.AUDIO) & allowed_chats, handle_voice))
+
+    logger.info("Starting bot...")
+    app.add_error_handler(bot_error_handler)
+    app.run_polling(timeout=300)
+
 
 if __name__ == "__main__":
     if not TELEGRAM_TOKEN or not OPENAI_API_KEY:
