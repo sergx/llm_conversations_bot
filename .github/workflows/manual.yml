@@ -9,7 +9,6 @@ jobs:
     env:
       SUCCESS_FILE: /home/sergx/tmp/git-pull-success__llm_conv_bot.txt
       ERROR_FILE: /home/sergx/tmp/git-pull-error__llm_conv_bot.txt
-      TEST_ENV: 'qweqweqwe'
     steps:
       - run: echo "🎉 The job was automatically triggered. $TEST_ENV"
 
@@ -40,6 +39,7 @@ jobs:
                   -d chat_id=${{ vars.TELEGRAM_CHAT_ID }} \
                   --data-urlencode text="$chunk"
                 message="${message:max_length}"
+                -d parse_mode=HTML
               done
             }
 
