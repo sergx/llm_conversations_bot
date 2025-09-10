@@ -37,18 +37,19 @@ jobs:
                 chunk="${message:0:max_length}"
                 curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
                   -d chat_id=${{ vars.TELEGRAM_CHAT_ID }} \
-                  --data-urlencode text="$chunk"
+                  --data-urlencode text="$chunk" \
+                  -d parse_mode=HTML
                 message="${message:max_length}"
-                -d parse_mode=HTML
               done
             }
 
             if [ -s "$ERROR_FILE" ]; then
-              send_telegram "❌ $TEST_ENV Deployment failed\n$(cat "$ERROR_FILE")"
+              # Use $'...' to interpret \n as a real newline
+              send_telegram $'❌ '"Deployment failed\n"$(cat "$ERROR_FILE")
             fi
 
             if [ -s "$SUCCESS_FILE" ]; then
-              send_telegram "✅ $TEST_ENV Deployment success\n$(cat "$SUCCESS_FILE")"
+              send_telegram $'✅ '"Deployment success\n"$(cat "$SUCCESS_FILE")
             fi
 
             rm -f "$SUCCESS_FILE" "$ERROR_FILE"
