@@ -22,7 +22,7 @@ jobs:
             cd llm_conversations_bot
 
             # Run git pull and capture stdout/stderr separately
-            { git pull >"$SUCCESS_FILE" 2>"$ERROR_FILE"; }
+            { git pull 2>&1 > /home/sergx/tmp/git-pull-success__llm_conv_bot.txt || echo "Git pull failed" > /home/sergx/tmp/git-pull-error__llm_conv_bot.txt;}
 
             sudo systemctl restart llm_conversations_bot.service
 
@@ -38,14 +38,14 @@ jobs:
               done
             }
 
-            if [ -s "$ERROR_FILE" ]; then
+            if [ -s /home/sergx/tmp/git-pull-error__llm_conv_bot.txt ]; then
               send_telegram "❌ Deployment failed"
-              send_telegram "$(cat "$ERROR_FILE")"
+              send_telegram "$(cat /home/sergx/tmp/git-pull-error__llm_conv_bot.txt)"
             fi
 
-            if [ -s "$SUCCESS_FILE" ]; then
+            if [ -s /home/sergx/tmp/git-pull-success__llm_conv_bot.txt ]; then
               send_telegram "✅ Deployment success"
-              send_telegram "$(cat "$SUCCESS_FILE")"
+              send_telegram "$(cat /home/sergx/tmp/git-pull-success__llm_conv_bot.txt)"
             fi
 
 
