@@ -1,4 +1,4 @@
-name: LLM COnvarsation Bot
+name: LLM Conversation Bot
 
 on: [push]
 
@@ -13,49 +13,39 @@ jobs:
 
       - name: Run scripts
         uses: appleboy/ssh-action@v1.0.3
-
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USERNAME }}
           password: ${{ secrets.PRODUCTION_PASSWORD }}
-          # key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.PRODUCTION_PORT }} # default 22
+          port: ${{ secrets.PRODUCTION_PORT }}
           script: |
-            echo "TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}"
-            echo "TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}"
-            echo "SUCCESS_FILE path: $SUCCESS_FILE"
-            echo "ERROR_FILE path: $ERROR_FILE"
             cd llm_conversations_bot
-            { git pull 2>&1 > "$SUCCESS_FILE" || echo "Git pull failed" > "$ERROR_FILE";} 
+
+            # Run git pull and capture stdout/stderr separately
+            { git pull >"$SUCCESS_FILE" 2>"$ERROR_FILE"; }
+
             sudo systemctl restart llm_conversations_bot.service
+
+            send_telegram () {
+              local message="$1"
+              local max_length=4096
+              while [ -n "$message" ]; do
+                chunk="${message:0:max_length}"
+                curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                  -d chat_id=${{ vars.TELEGRAM_CHAT_ID }} \
+                  -d text="$chunk"
+                message="${message:max_length}"
+              done
+            }
+
             if [ -s "$ERROR_FILE" ]; then
-              error_message=$(cat $ERROR_FILE)
-              max_length=4096
-
-              # Send initial message
-              curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-                -d chat_id=${{ vars.TELEGRAM_CHAT_ID }} \
-                -d text="Deployment failed with the following error $ERROR_FILE"
-
-              # Send error message in chunks
-              while [ -n "$error_message" ]; do
-                chunk="${error_message:0:max_length}"
-                curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-                  -d chat_id=${{ vars.TELEGRAM_CHAT_ID }} \
-                  -d text="$chunk"
-                error_message="${error_message:max_length}"
-              done
+              send_telegram "❌ Deployment failed"
+              send_telegram "$(cat "$ERROR_FILE")"
             fi
+
             if [ -s "$SUCCESS_FILE" ]; then
-              success_message=$(cat "$SUCCESS_FILE")
-              max_length=4096
-              while [ -n "$success_message" ]; do
-                chunk="${success_message:0:max_length}"
-                curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-                  -d chat_id=${{ vars.TELEGRAM_CHAT_ID }} \
-                  -d text="$chunk"
-                success_message="${success_message:max_length}"
-              done
+              send_telegram "✅ Deployment success"
+              send_telegram "$(cat "$SUCCESS_FILE")"
             fi
-            rm -f "$SUCCESS_FILE" "$ERROR_FILE"
 
+            rm -f "$SUCCESS_FILE" "$ERROR_FILE"
