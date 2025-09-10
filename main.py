@@ -1,4 +1,5 @@
-# create conda env
+# sudo systemctl start llm_conversations_bot.service
+# sudo systemctl status llm_conversations_bot.service
 
 import traceback
 from pprint import pformat
@@ -20,7 +21,6 @@ import asyncio
 from telegram import Update, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler
 
-from openai import OpenAI
 from db import *
 from config import *
 
@@ -32,15 +32,8 @@ logger = setup_logger(__name__)
 
 from function_telegram import safe_send_message
 
-# make sure folders exist
-os.makedirs(f"voices", exist_ok=True)
-
-# --- logging ---
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
-
-
-client = OpenAI(api_key=OPENAI_API_KEY)
+from openai_proxy_client import openai_client
+client = openai_client()
 
 actions = (
     '/newconv_text',
@@ -49,6 +42,9 @@ actions = (
     '/convs',
     '/renameconv',
 )
+
+
+
 # --- OpenAI helpers ---
 def count_tokens(model_name, text):
     """Count tokens for a given model."""
@@ -544,6 +540,8 @@ conversations = {
 }
 
 def main():
+    
+    os.makedirs(f"voices", exist_ok=True)
     init_db()
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 

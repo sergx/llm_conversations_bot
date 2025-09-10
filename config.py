@@ -8,6 +8,7 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL")
+SHARED_PROXY_URL = os.getenv("SHARED_PROXY_URL")
 
 COST_CACHE_FILE = "openai_cost_cache.json"
 COST_CACHE_TTL = 24 * 3600  # 1 день
