@@ -48,4 +48,4 @@ jobs:
               send_telegram "$(cat "$SUCCESS_FILE")"
             fi
 
-            rm -f "$SUCCESS_FILE" "$ERROR_FILE"
+
