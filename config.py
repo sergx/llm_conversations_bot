@@ -18,3 +18,9 @@ if os.getenv("DEVELOPER_CHAT_IDS"):
     DEVELOPER_CHAT_IDS = [int(_) for _ in os.getenv("DEVELOPER_CHAT_IDS").split(",")]
 else:
     DEVELOPER_CHAT_IDS = []
+
+
+if os.getenv("ALLOWED_CHAT_IDS"):
+    ALLOWED_CHAT_IDS = [int(_) for _ in os.getenv("ALLOWED_CHAT_IDS").split(",")]
+else:
+    ALLOWED_CHAT_IDS = []
