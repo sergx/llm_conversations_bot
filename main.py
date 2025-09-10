@@ -561,24 +561,6 @@ def main():
     
     os.makedirs(f"voices", exist_ok=True)
     init_db()
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    app.add_handler(conversations["renameconv"])
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("newconv", newconv_command, filters=allowed_users_filter))
-    app.add_handler(CommandHandler("newconv_audio", newconv_audio_command, filters=allowed_users_filter))
-    app.add_handler(CommandHandler("newconv_text", newconv_text_command, filters=allowed_users_filter))
-    app.add_handler(CommandHandler("convs", convs_command, filters=allowed_users_filter))
-    app.add_handler(MessageHandler(filters.Regex(r"^/switch_\d+$") & allowed_users_filter, switch_command))
-
-    # text messages
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & allowed_users_filter, handle_text))
-    # voice or audio
-    app.add_handler(MessageHandler((filters.VOICE | filters.AUDIO) & allowed_users_filter, handle_voice))
-
-    logger.info("Starting bot...")
-    app.add_error_handler(bot_error_handler)
-    app.run_polling(timeout=300)
-
 
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(conversations["renameconv"])
