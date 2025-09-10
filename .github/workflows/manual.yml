@@ -22,6 +22,8 @@ jobs:
           envs: SUCCESS_FILE,ERROR_FILE
           script: |
             mkdir -p /home/sergx/tmp
+            
+            rm -f "$SUCCESS_FILE" "$ERROR_FILE"
 
             cd llm_conversations_bot || { echo "❌ Folder not found"; exit 1; }
 
@@ -57,10 +59,10 @@ jobs:
             }
 
             if [ -s "$ERROR_FILE" ]; then
-              send_telegram $'❌ Deployment failed\n'$(cat "$ERROR_FILE")
+              send_telegram $(cat "$ERROR_FILE")
             fi
 
             if [ -s "$SUCCESS_FILE" ]; then
-              send_telegram $'✅ Deployment success\n'$(cat "$SUCCESS_FILE")
+              send_telegram $(cat "$SUCCESS_FILE")
             fi
 
