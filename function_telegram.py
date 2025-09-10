@@ -22,9 +22,3 @@ async def safe_send_message(context: ContextTypes.DEFAULT_TYPE, chat_id, text, *
     
 def allowed_users_filter(update):
     return update.effective_chat and update.effective_chat.id in ALLOWED_CHAT_IDS
-
-class AllowedChats:
-    def __call__(self, update: Update) -> bool:
-        return update.effective_chat and update.effective_chat.id in ALLOWED_CHAT_IDS
-
-allowed_chats = AllowedChats()

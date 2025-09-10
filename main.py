@@ -1,5 +1,6 @@
 # sudo systemctl restart llm_conversations_bot.service
 # sudo systemctl start llm_conversations_bot.service
+# sudo systemctl stop llm_conversations_bot.service
 # sudo systemctl status llm_conversations_bot.service
 
 import traceback
@@ -188,13 +189,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='HTML'
         )
         return ConversationHandler.END
-    # await update.message.reply_text(
-    #     text = (
-    #         f"Ваш chat_id - <pre>{chat_id}</pre>\n"
-    #         f"Сообщите об этом кому надо."
-    #     ),
-    #     parse_mode='HTML'
-    # )
+
     active = get_active_conversation(user_id)
     if not active:
         # create_conversation(user_id, conversation_name="Noname", model_name=DEFAULT_MODEL, set_active=True)
@@ -202,7 +197,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # await update.message.reply_text(f"Hello {user.first_name}. Created conversation {conv_id} (model {DEFAULT_MODEL}). Actions:\n{'\n'.join(actions)}" )
         await newconv_command(update, context)
     else:
-        conv_id, model_name, conversation_name, dialogues_count, force_audio = active
+        conv_id, model_name, conversation_name, dialogues_count, force_audio, force_text = active
         await update.message.reply_text(f"Hello again. Actions:\n{'\n'.join(actions)}\n\nYou have active conversation id {conv_id}: \n[{model_name}] — dialogues_count: {dialogues_count}\n<b>{conversation_name}..</b>", parse_mode="HTML")
 
 
