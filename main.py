@@ -179,16 +179,22 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = get_or_create_user(user)
     chat_id = user.id
-    if chat_id not in ALLOWED_CHAT_IDS:
-        await update.message.reply_text(
-            text = (
-                f"Ваш chat_id - <pre>{chat_id}</pre>\n"
-                f"Сообщите об этом кому надо."
-            ),
-            parse_mode='HTML'
-        )
-        return ConversationHandler.END
-    
+    # if chat_id not in ALLOWED_CHAT_IDS:
+    #     await update.message.reply_text(
+    #         text = (
+    #             f"Ваш chat_id - <pre>{chat_id}</pre>\n"
+    #             f"Сообщите об этом кому надо."
+    #         ),
+    #         parse_mode='HTML'
+    #     )
+    #     return ConversationHandler.END
+    await update.message.reply_text(
+        text = (
+            f"Ваш chat_id - <pre>{chat_id}</pre>\n"
+            f"Сообщите об этом кому надо."
+        ),
+        parse_mode='HTML'
+    )
     active = get_active_conversation(user_id)
     if not active:
         # create_conversation(user_id, conversation_name="Noname", model_name=DEFAULT_MODEL, set_active=True)
