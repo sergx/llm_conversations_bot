@@ -232,13 +232,7 @@ async def renameconv_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     return 'AWAIT_NEW_NAME'
 
 async def text_to_audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    user_id = get_or_create_user(user)
-    active = get_active_conversation(user_id)
-    if not active:
-        return await update.message.reply_text("Не выбран диалог")
-    conv_id, model_name, conversation_name, dialogues_count, force_audio, force_text = active
-    await update.message.reply_text(f"Укажите название диалога. Текущее название:\n<i>{conversation_name}</i>\n\n/cancel — оставить имя диалога как есть", parse_mode="HTML")
+    await update.message.reply_text(f"Пришлите текст на озвучку\n\n/cancel — оставить имя диалога как есть", parse_mode="HTML")
     return 'AWAIT_TEXT'
 
 async def renameconv_command_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -588,6 +582,7 @@ def main():
 
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(conversations["renameconv"])
+    app.add_handler(conversations["text_to_audio"])
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("newconv", newconv_command, filters=filters.User(ALLOWED_CHAT_IDS)))
     app.add_handler(CommandHandler("newconv_audio", newconv_audio_command, filters=filters.User(ALLOWED_CHAT_IDS)))
