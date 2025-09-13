@@ -198,6 +198,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         conv_id, model_name, conversation_name, dialogues_count, force_audio, force_text = active
         await update.message.reply_text(f"Hello again. Actions:\n{'\n'.join(actions)}\n\nYou have active conversation id {conv_id}: \n[{model_name}] — dialogues_count: {dialogues_count}\n<b>{conversation_name}..</b>", parse_mode="HTML")
+    
+    return ConversationHandler.END
 
 
 async def newconv_audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
