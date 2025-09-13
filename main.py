@@ -232,7 +232,7 @@ async def renameconv_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     return 'AWAIT_NEW_NAME'
 
 async def text_to_audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Пришлите текст на озвучку\n\n/cancel — оставить имя диалога как есть", parse_mode="HTML")
+    await update.message.reply_text(f"Пришлите текст на озвучку\n\n/cancel — отменить", parse_mode="HTML")
     return 'AWAIT_TEXT'
 
 async def renameconv_command_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -240,7 +240,7 @@ async def renameconv_command_cancel(update: Update, context: ContextTypes.DEFAUL
     return ConversationHandler.END
 
 async def text_to_audio_command_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Ок, вы больше не в режиме text_to_audio.\nВсе что вы напишите дальше может быть использовано против вас (с)", parse_mode="HTML")
+    await update.message.reply_text(f"Вы больше не в режиме text_to_audio.\nВсе что вы напишите дальше может быть использовано против вас (с)", parse_mode="HTML")
     return ConversationHandler.END
 
 async def conv__renameconv_ON_AWAIT_NEW_NAME(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -448,6 +448,7 @@ async def conv__text_to_audio_ON_AWAIT_TEXT(update: Update, context: ContextType
     llm_ogg_path = os.path.join(llm_voice_dir, llm_ogg_filename)
     
     await convert_and_split_mp3_to_ogg(llm_path, llm_ogg_path, update)
+    return text_to_audio_command_cancel(update, context)
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
