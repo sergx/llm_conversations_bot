@@ -16,6 +16,7 @@ import json
 import tiktoken
 import grapheme
 import asyncio
+import glob
 
 # python-telegram-bot
 from telegram import Update, InputFile
@@ -230,8 +231,22 @@ async def renameconv_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(f"Укажите название диалога. Текущее название:\n<i>{conversation_name}</i>\n\n/cancel — оставить имя диалога как есть", parse_mode="HTML")
     return 'AWAIT_NEW_NAME'
 
+async def text_to_audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    user_id = get_or_create_user(user)
+    active = get_active_conversation(user_id)
+    if not active:
+        return await update.message.reply_text("Не выбран диалог")
+    conv_id, model_name, conversation_name, dialogues_count, force_audio, force_text = active
+    await update.message.reply_text(f"Укажите название диалога. Текущее название:\n<i>{conversation_name}</i>\n\n/cancel — оставить имя диалога как есть", parse_mode="HTML")
+    return 'AWAIT_TEXT'
+
 async def renameconv_command_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Ок, вы больше не переименовываете диалог.\nВсе что вы напишите дальше может быть использовано против вас (с)", parse_mode="HTML")
+    return ConversationHandler.END
+
+async def text_to_audio_command_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"Ок, вы больше не в режиме text_to_audio.\nВсе что вы напишите дальше может быть использовано против вас (с)", parse_mode="HTML")
     return ConversationHandler.END
 
 async def conv__renameconv_ON_AWAIT_NEW_NAME(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -312,8 +327,17 @@ async def switch_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if row['llm_text_answer']:
                 await safe_send_message(context, chat_id, f"GPT:\n{row['llm_text_answer']}")
                 
-            if row['llm_voice_filepath'] and os.path.exists(row['llm_voice_filepath']):
-                await update.message.reply_audio(audio=open(row['llm_voice_filepath'], "rb"))
+            if row['llm_voice_filepath']:
+                try:
+                    filepaths = json.loads(row['llm_voice_filepath'])
+                    if not isinstance(filepaths, list):
+                        filepaths = [filepaths]
+                except json.JSONDecodeError:
+                    filepaths = [row['llm_voice_filepath']]
+
+                for path in filepaths:
+                    if os.path.exists(path):
+                        await update.message.reply_audio(audio=open(path, "rb"))
 
 
             time.sleep(1)
@@ -376,32 +400,60 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await tts_generate(reply_text, llm_path, chat_id=chat_id, context=context)
         
         # send result: text + audio
-        await safe_send_message(context, chat_id, f"{model_name}:\n{reply_text}\n\n{'\n'.join(actions)}")
+        await safe_send_message(context, chat_id, f"✅{model_name}:\n{reply_text}\n\n{'\n'.join(actions)}")
 
         # Convert MP3 → OGG for Telegram voice
         llm_ogg_filename = f"{uuid.uuid4().hex}_llm.ogg"
         llm_ogg_path = os.path.join(llm_voice_dir, llm_ogg_filename)
         
-        convert_mp3_to_ogg(llm_path, llm_ogg_path)
+        llm_ogg_paths = await convert_and_split_mp3_to_ogg(llm_path, llm_ogg_path, update)
         
-        save_dialogue(conv_id, "voice", user_text=user_text, llm_text_answer=reply_text, llm_voice_filepath=llm_ogg_path)
+        llm_ogg_paths = json.dumps(llm_ogg_paths)
+        
+        save_dialogue(conv_id, "voice", user_text=user_text, llm_text_answer=reply_text, llm_voice_filepath=llm_ogg_paths)
         
         # Send as a voice message (round bubble in Telegram)
-        await update.message.reply_audio(audio=open(llm_ogg_path, "rb"), title='title')
+        # await update.message.reply_audio(audio=open(llm_ogg_path, "rb"), title='title')
     else:
         
         save_dialogue(conv_id, "text", user_text=user_text, llm_text_answer=reply_text)
-        await safe_send_message(context, chat_id, f"{reply_text}\n\n{'\n'.join(actions)}")
+        await safe_send_message(context, chat_id, f"✅{model_name}:\n{reply_text}\n\n{'\n'.join(actions)}")
 
-def convert_mp3_to_ogg(in_mp3, out_ogg):
-    cmd = f'ffmpeg -y -i "{in_mp3}" -c:a libopus -b:a 64k -ar 48000 -ac 1 "{out_ogg}"'
-    print("Running command:", cmd)
+async def convert_and_split_mp3_to_ogg(in_mp3, out_dir, update):
+    os.makedirs(out_dir, exist_ok=True)
+    # convert to ogg and split into 300s chunks
+    cmd = f'ffmpeg -y -i "{in_mp3}" -c:a libopus -b:a 64k -ar 48000 -ac 1 -f segment -segment_time 300 "{out_dir}/chunk_%03d.ogg"'
     result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
-    print("stdout:", result.stdout)
-    print("stderr:", result.stderr)
     if result.returncode != 0:
-        raise RuntimeError("ffmpeg failed")
-    return out_ogg
+        raise RuntimeError(f"ffmpeg failed: {result.stderr}")
+
+    ogg_files = []
+    # send all chunks one by one
+    for ogg_file in sorted(glob.glob(f"{out_dir}/chunk_*.ogg")):
+        ogg_files.append(ogg_file)
+        await update.message.reply_audio(audio=open(ogg_file, "rb"), title=os.path.basename(ogg_file))
+        time.sleep(1)
+    return ogg_files
+
+async def conv__text_to_audio_ON_AWAIT_TEXT(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    user_id = get_or_create_user(user)
+    chat_id = user.id
+    user_text = update.message.text
+    if not user_text:
+        await update.message.reply_text("Текста нет, но вы держитесь.")
+        return
+    
+    llm_voice_dir = os.path.join("voices", str(user_id), "text_to_audio")
+    os.makedirs(llm_voice_dir, exist_ok=True)
+    llm_filename = f"{uuid.uuid4().hex}_llm.mp3"
+    llm_path = os.path.join(llm_voice_dir, llm_filename)
+    await tts_generate(user_text, llm_path, chat_id=chat_id, context=context)
+    
+    llm_ogg_filename = f"{uuid.uuid4().hex}_llm.ogg"
+    llm_ogg_path = os.path.join(llm_voice_dir, llm_ogg_filename)
+    
+    await convert_and_split_mp3_to_ogg(llm_path, llm_ogg_path, update)
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -463,7 +515,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Generate TTS audio
     try:
-        await safe_send_message(context, chat_id, f"{model_name}\n\n{reply_text}\n\n{'\n'.join(actions)}")
+        await safe_send_message(context, chat_id, f"✅{model_name}\n\n{reply_text}\n\n{'\n'.join(actions)}")
         if force_text:
             save_dialogue(conv_id, "text", user_voice_filepath=local_path, user_voice_transcribed=transcript, llm_text_answer=reply_text)
         else:
@@ -477,15 +529,18 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             llm_ogg_filename = f"{uuid.uuid4().hex}_llm.ogg"
             llm_ogg_path = os.path.join(llm_voice_dir, llm_ogg_filename)
             
-            convert_mp3_to_ogg(llm_path, llm_ogg_path)
+            llm_ogg_paths = await convert_and_split_mp3_to_ogg(llm_path, llm_ogg_path, update)
             
-            save_dialogue(conv_id, "voice", user_voice_filepath=local_path, user_voice_transcribed=transcript, llm_text_answer=reply_text, llm_voice_filepath=llm_ogg_path)
+            llm_ogg_paths = json.dumps(llm_ogg_paths)
+            
+            
+            save_dialogue(conv_id, "voice", user_voice_filepath=local_path, user_voice_transcribed=transcript, llm_text_answer=reply_text, llm_voice_filepath=llm_ogg_paths)
             
             # Send as a voice message (round bubble in Telegram)
-            await update.message.reply_audio(audio=open(llm_ogg_path, "rb"), title='title')
+            # await update.message.reply_audio(audio=open(llm_ogg_path, "rb"), title='title')
     except Exception as e:
         logger.exception("TTS generation or send failed: %s", e)
-        await update.message.reply_text(reply_text)
+        await safe_send_message(context, chat_id, f"✅{model_name}\n\n{reply_text}\n\n{'\n'.join(actions)}")
 
 # --- main ---
 
@@ -499,6 +554,22 @@ conversations = {
                 # MessageHandler(filters.Regex("^Назад$"), command_handler__start),
                 CommandHandler("cancel", renameconv_command_cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, conv__renameconv_ON_AWAIT_NEW_NAME)
+                ],
+        },
+        fallbacks=[
+            CommandHandler("start", start_command),
+        ],
+        # per_message=True,
+    ),
+    'text_to_audio' : ConversationHandler(
+        entry_points=[
+            CommandHandler("text_to_audio", text_to_audio_command)
+        ],
+        states={
+            'AWAIT_TEXT': [
+                # MessageHandler(filters.Regex("^Назад$"), command_handler__start),
+                CommandHandler("cancel", text_to_audio_command_cancel),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, conv__text_to_audio_ON_AWAIT_TEXT)
                 ],
         },
         fallbacks=[
