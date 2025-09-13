@@ -449,8 +449,8 @@ async def conv__text_to_audio_ON_AWAIT_TEXT(update: Update, context: ContextType
     llm_ogg_filename = f"{uuid.uuid4().hex}_llm.ogg"
     llm_ogg_path = os.path.join(llm_voice_dir, llm_ogg_filename)
     
-    await convert_and_split_mp3_to_ogg(llm_path, llm_ogg_path, update)
-    return text_to_audio_command_cancel(update, context)
+    llm_ogg_paths = await convert_and_split_mp3_to_ogg(llm_path, llm_ogg_path, update)
+    return await text_to_audio_command_cancel(update, context)
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
