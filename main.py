@@ -104,9 +104,9 @@ async def chat_completion_get_reply(system_prompt, messages, model_name, context
         )
 
     tasks = []
-    if context is not None and chat_id is not None:
-        tasks.append(run_model("gpt-5-nano"))
-        tasks.append(run_model("gpt-5-mini"))
+    # if context is not None and chat_id is not None:
+    #     tasks.append(run_model("gpt-5-nano"))
+    #     tasks.append(run_model("gpt-5-mini"))
 
     # главный всегда в конце, чтобы было удобно возвращать
     tasks.append(run_model(model_name))
