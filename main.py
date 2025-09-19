@@ -520,7 +520,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             os.makedirs(llm_voice_dir, exist_ok=True)
             llm_filename = f"{uuid.uuid4().hex}_llm.mp3"
             llm_path = os.path.join(llm_voice_dir, llm_filename)
-            tts_generate(reply_text, llm_path, chat_id=chat_id, context=context)
+            await tts_generate(reply_text, llm_path, chat_id=chat_id, context=context)
 
             # Convert MP3 → OGG for Telegram voice
             llm_ogg_filename = f"{uuid.uuid4().hex}_llm.ogg"
